@@ -94,3 +94,11 @@ postUpdate | event fires after update record
 postSave | event fires after save record
 postDelete | event fires after delete record
 errorHandler | handler error
+
+Data Attributes
+===============
+On a td, set with data-x="value", where x is one of:
+
+type: set field type
+value: set initial value
+no-edit: set to true to disable editing
