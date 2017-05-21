@@ -205,8 +205,8 @@
                 $row.remove();
             }else{
                 $row.find('td').each(function(i, td){
-                    var $field = $(td);
-                    $field.find('input').val($field.data('value'));
+                    var typePlugin = getTypePlugin(td);
+                    typePlugin.fieldReset(td);
                 });
             }
         });
@@ -399,13 +399,18 @@
             return inputField;
         },
 
-        isChanged : function (field){
+        isChanged : function (field) {
             return field.attr('data-value') !== field.find('input').val();
         },
 
-        fieldSaved: function (field){
+        fieldSaved: function (field) {
             var value = $(field).find('input').val();
             $(field).attr('data-value', value);
+        },
+
+        fieldReset : function (field) {
+            var $field = $(field);
+            $field.find('input').val($field.data('value'));
         },
 
         validate: function (conditions, field) {
@@ -434,6 +439,15 @@
             var inputWrapper = $('<div class="ui fluid transparent input"></div>');
             var inputField = inputWrapper.append($('<textarea></textarea>').val(value));
             return inputField
+        },
+
+        isChanged : function (field) {
+            return field.attr('data-value') !== field.find('textarea').val();
+        },
+
+        fieldReset : function (field) {
+            var $field = $(field);
+            $field.find('textarea').val($field.data('value'));
         }
     });
 
