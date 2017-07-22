@@ -1,4 +1,5 @@
 (function($) {
+    /* global jQuery */
 
     //add batch operation
     $.fn.editableRecord = function( options ) {
@@ -40,6 +41,7 @@
         postUpdate: jQuery.noop,
         postSave: jQuery.noop,
         postDelete: jQuery.noop,
+        postSubmit: jQuery.noop,
         detailButtonClicked: jQuery.noop,
         errorHandler: jQuery.noop
     };
@@ -57,10 +59,17 @@
 
     function getKeys(editableRecord){
         var keys = [];
-        editableRecord.find('thead th').each(function (i, th) {
-            var key = $(th).attr('name');
-            if(key !== 'action') keys.push(key);
-        });
+        if (editableRecord.multiple) {
+            editableRecord.find('th').each(function (i, th) {
+                var key = $(th).attr('name');
+                if(key !== 'action') keys.push(key);
+            });
+        } else {
+            editableRecord.find('td[data-header=true]').not('[data-no-edit=true]').each(function (i, th) {
+                var key = $(th).attr('name');
+                if(key !== 'action') keys.push(key);
+            });
+        }
         return keys;
     }
 
@@ -71,18 +80,40 @@
     }
 
     function getPostData(editableRecord, keys, row){
-        var fields = row.find('td');
+        var fields = row.find('td+td').not('[data-no-edit=true]');
         var tmp = {};
-        if(row.attr('id') !== undefined){
-            tmp[editableRecord.idName] = row.attr('id');
-        }
-        for(var i = 0; i < keys.length; i++){
-            if($(fields[i]).data('type') == 'select'){
-                tmp[keys[i]] = $(fields[i]).find('select').val();
-            }else {
-                tmp[keys[i]] = $(fields[i]).find('input').val();
+        if (editableRecord.multiple) {
+            if(row.attr('id') !== undefined){
+                tmp[editableRecord.idName] = row.attr('id');
+            }
+            for (var i = 0; i < keys.length; i++) {
+                if ($(fields[i]).data('type') == 'select') {
+                    tmp[keys[i]] = $(fields[i]).find('select').val();
+                } else if ($(fields[i]).data('type') == 'textarea') {
+                    tmp[keys[i]] = $(fields[i]).find('textarea').val();
+                } else {
+                    tmp[keys[i]] = $(fields[i]).find('input').val();
+                }
+            }
+
+        } else {
+            if (keys.length == fields.length) {
+                for (var i = 0; i < keys.length; i++) {
+                    if ($(fields[i]).data('type') == 'select') {
+                        tmp[keys[i]] = $(fields[i]).find('select').val();
+                    } else if ($(fields[i]).data('type') == 'textarea') {
+                        tmp[keys[i]] = $(fields[i]).find('textarea').val();
+                    } else {
+                        tmp[keys[i]] = $(fields[i]).find('input').val();
+                    }
+                }
+            } else {
+                console.log('Fields do not match keys');
+                console.log(keys);
+                console.log(fields);
             }
         }
+
         return tmp;
     }
 
@@ -129,7 +160,7 @@
         hideButtons(editableRecord);
         hideNewButton(editableRecord);
 
-        if(editableRecord.multiple) {
+        if (editableRecord.multiple) {
             showNewButton(editableRecord);
         }
     }
@@ -137,7 +168,7 @@
     function makeFieldsEditable(editableRecord, row){
         var $row = $(row);
 
-        if(!$row.find('td').last().hasClass('action')){
+        if (!$row.find('td').last().hasClass('action') && editableRecord.multiple) {
             $row.append('<td class="action"></td>');
         }
 
@@ -145,7 +176,7 @@
             var $field = $(td);
             if(!$field.hasClass('action')) {
                 // Check for no-edit
-                if ($field.data('no-edit') == true) {
+                if ($field.data('header') == true || $field.data('no-edit') == true) {
                     return;
                 }
                 // Remove classes that conflict with editing.
@@ -179,20 +210,28 @@
     function saveButtonClicked(editableRecord){
         var keys = getKeys(editableRecord);
         var postDatas = [];
-        editableRecord.find('tbody tr').each(function (i, tr) {
-            var $row = $(tr);
-            var postData = {};
 
-            if(isChanged($row)){
-                if(doValidate(editableRecord, $row)){
-                    postData = getPostData(editableRecord, keys, $row);
-                    postDatas.push({data:postData, row: $row});
-                }else {
-                    $row.addClass('negative');
-                    $row.find('div.ui.input').addClass('error');
+        if (editableRecord.multiple) {
+            editableRecord.find('tbody tr').each(function (i, tr) {
+                var $row = $(tr);
+                var postData = {};
+    
+                if(isChanged($row)){
+                    if(doValidate(editableRecord, $row)){
+                        postData = getPostData(editableRecord, keys, $row);
+                        postDatas.push({data:postData, row: $row});
+                    }else {
+                        $row.addClass('negative');
+                        $row.find('div.ui.input').addClass('error');
+                    }
                 }
-            }
-        });
+            });
+
+        } else {
+            var $row = $(editableRecord.find('tbody'));
+            var postData = getPostData(editableRecord, keys, $row);
+            postDatas.push({data:postData, row: $row});
+        }
 
         saveAll(editableRecord, postDatas);
     }
@@ -247,7 +286,7 @@
         if($.isEmptyObject(postDatas)) return;
 
         saving(editableRecord);
-
+        
         var requests = [];
         $.each(postDatas, function (i, postData) {
             var isNew = isNewRecord(editableRecord, postData.data);
@@ -264,27 +303,25 @@
                 type : 'POST',
                 data: postData.data,
                 cache : false,
-                dataType : 'json',
-                success: function(result){
-                    postData.row.removeClass('negative').addClass('positive');
-                    postData.row.find('div.ui.input').removeClass('error');
-                    postData.row.attr('id', result[editableRecord.idName]);
-                    postData.row.find('td').each(function(idx, td){
-                        var typePlugin = getTypePlugin(td);
-                        typePlugin.fieldSaved(td);
-                    });
-                    if(isNew){
-                        editableRecord.postCreate(result);
-                    }else{
-                        editableRecord.postUpdate(result);
-                    }
-                    editableRecord.postSave(result);
-                },
-                error: function(result){
-                    postData.row.removeClass('positive').addClass('negative');
-                    editableRecord.errorHandler(result);
-                    saveComplete(editableRecord);
+            })
+            .done(function(data, textStatus, jqXHR) {
+                postData.row.removeClass('negative').addClass('positive');
+                postData.row.find('div.ui.input').removeClass('error');
+                postData.row.attr('id', data[editableRecord.idName]);
+                postData.row.find('td').each(function(idx, td){
+                    var typePlugin = getTypePlugin(td);
+                    typePlugin.fieldSaved(td);
+                });
+                if(isNew){
+                    editableRecord.postCreate(data);
+                }else{
+                    editableRecord.postUpdate(data);
                 }
+                editableRecord.postSave(data);
+            })
+            .fail(function (jqXHR, textStatus, errorThrown) {
+                postData.row.removeClass('positive').addClass('negative');
+                editableRecord.errorHandler(jqXHR);
             });
             requests.push(request);
         });
@@ -292,6 +329,7 @@
         $.when.apply($, requests).then(function(){
             //todo: add error handler
             saveComplete(editableRecord);
+            editableRecord.postSubmit();
         });
     }
 
@@ -303,7 +341,7 @@
     }
 
     function isNewRecord(editableRecord, postData){
-        return postData[editableRecord.idName] === undefined;
+        return editableRecord.multiple && (postData[editableRecord.idName] === undefined);
     }
 
     function isChanged(row){
@@ -433,11 +471,12 @@
     $.fn.editableRecord.typePlugins.textarea = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable : function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.html();
+                value = value.replace(/<br\s?[\/]?> */gi, '\n');
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui fluid transparent input"></div>');
-            var inputField = inputWrapper.append($('<textarea></textarea>').val(value));
+            var inputField = inputWrapper.append($('<textarea></textarea>').html(value));
             return inputField
         },
 
@@ -447,7 +486,8 @@
 
         fieldReset : function (field) {
             var $field = $(field);
-            $field.find('textarea').val($field.data('value'));
+            // Use an anonymous <textarea> to htmldecode the data.
+            $field.find('textarea').val($('<textarea />').html($field.data('value')).text());
         }
     });
 
@@ -549,7 +589,7 @@
             var $field = $(field),
                 value = $field.data('value') || $field.text(),
                 defaultValue = $field.data('defaultvalue'),
-                defaultLable = $field.data('defaultlable'),
+                defaultLabel = $field.data('defaultlabel'),
                 optionsFunction = $field.data('options');
 
             var options = window[optionsFunction]();
@@ -558,10 +598,12 @@
             var inputField = $('<select class="ui dropdown"></select>'),
                 defaultOption = $('<option></option>');
             defaultOption.val(defaultValue);
-            defaultOption.text(defaultLable);
+            defaultOption.text(defaultLabel);
             inputField.append(defaultOption);
 
             $.each(options, function(idx, elem){
+                console.log(idx);
+                console.log(elem);
 
                 var option = $('<option></option>');
                 option.val(elem.value);
