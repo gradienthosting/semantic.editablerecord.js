@@ -426,7 +426,7 @@
 
     $.fn.editableRecord.typePlugins.text = {
 
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text();
 
@@ -437,7 +437,7 @@
             return inputField;
         },
 
-        isChanged : function (field) {
+        isChanged: function (field) {
             return field.attr('data-value') !== field.find('input').val();
         },
 
@@ -446,7 +446,7 @@
             $(field).attr('data-value', value);
         },
 
-        fieldReset : function (field) {
+        fieldReset: function (field) {
             var $field = $(field);
             $field.find('input').val($field.data('value'));
         },
@@ -469,7 +469,7 @@
     };
 
     $.fn.editableRecord.typePlugins.textarea = $.extend({}, $.fn.editableRecord.typePlugins.text, {
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.html();
                 value = value.replace(/<br\s?[\/]?> */gi, '\n');
@@ -480,11 +480,11 @@
             return inputField
         },
 
-        isChanged : function (field) {
+        isChanged: function (field) {
             return field.attr('data-value') !== field.find('textarea').val();
         },
 
-        fieldReset : function (field) {
+        fieldReset: function (field) {
             var $field = $(field);
             // Use an anonymous <textarea> to htmldecode the data.
             $field.find('textarea').val($('<textarea />').html($field.data('value')).text());
@@ -492,7 +492,7 @@
     });
 
     $.fn.editableRecord.typePlugins.email = $.extend({}, $.fn.editableRecord.typePlugins.text, {
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text();
 
@@ -504,7 +504,7 @@
     });
 
     $.fn.editableRecord.typePlugins.number = $.extend({}, $.fn.editableRecord.typePlugins.text, {
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text();
 
@@ -540,7 +540,7 @@
     });
 
     $.fn.editableRecord.typePlugins.checkbox = $.extend({}, $.fn.editableRecord.typePlugins.text, {
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text(),
                 checkedValue = $field.data('checked'),
@@ -571,7 +571,7 @@
     });
 
     $.fn.editableRecord.typePlugins.color = $.extend({}, $.fn.editableRecord.typePlugins.text,{
-        makeEditable : function (field) {
+        makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text();
 
@@ -583,7 +583,6 @@
         }
     });
 
-    //todo load value from text
     $.fn.editableRecord.typePlugins.select = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function (field) {
             var $field = $(field),
@@ -592,19 +591,22 @@
                 defaultLabel = $field.data('defaultlabel'),
                 optionsFunction = $field.data('options');
 
-            var options = window[optionsFunction]();
+            var options = [];
+            if (optionsFunction) {
+                options = window[optionsFunction]();
+            }
 
             $field.attr('data-value', value);
-            var inputField = $('<select class="ui dropdown"></select>'),
-                defaultOption = $('<option></option>');
-            defaultOption.val(defaultValue);
-            defaultOption.text(defaultLabel);
-            inputField.append(defaultOption);
+            var inputField = $('<select class="ui dropdown"></select>');
 
-            $.each(options, function(idx, elem){
-                console.log(idx);
-                console.log(elem);
+            if (defaultValue) {
+                var defaultOption = $('<option></option>');
+                defaultOption.val(defaultValue);
+                defaultOption.text(defaultLabel);
+                inputField.append(defaultOption);
+            }
 
+            $.each(options, function(idx, elem) {
                 var option = $('<option></option>');
                 option.val(elem.value);
                 option.text(elem.text);
@@ -636,7 +638,18 @@
                 }
             });
             return result;
+        },
+
+        fieldReset: function (field) {
+            var $field = $(field),
+                value = $field.data('value') || $field.text();
+            
+            $field.find('option').each(function (idx, elem) {
+                if (elem.value === value) {
+                    $(elem).prop('selected', true);
+                }
+            });
         }
-    })
+    });
 
 }(jQuery));
