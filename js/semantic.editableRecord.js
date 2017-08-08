@@ -62,12 +62,12 @@
         if (editableRecord.multiple) {
             editableRecord.find('th').each(function (i, th) {
                 var key = $(th).attr('name');
-                if(key !== 'action') keys.push(key);
+                if (key !== 'action') keys.push(key);
             });
         } else {
             editableRecord.find('td[data-header=true]').not('[data-no-edit=true]').each(function (i, th) {
                 var key = $(th).attr('name');
-                if(key !== 'action') keys.push(key);
+                if (key !== 'action') keys.push(key);
             });
         }
         return keys;
@@ -87,7 +87,7 @@
                 tmp[editableRecord.idName] = row.attr('id');
             }
             for (var i = 0; i < keys.length; i++) {
-                if ($(fields[i]).data('type') == 'select') {
+                if ($(fields[i]).data('type') == 'select' || $(fields[i]).data('type') == 'multiselect') {
                     tmp[keys[i]] = $(fields[i]).find('select').val();
                 } else if ($(fields[i]).data('type') == 'textarea') {
                     tmp[keys[i]] = $(fields[i]).find('textarea').val();
@@ -99,7 +99,7 @@
         } else {
             if (keys.length == fields.length) {
                 for (var i = 0; i < keys.length; i++) {
-                    if ($(fields[i]).data('type') == 'select') {
+                    if ($(fields[i]).data('type') == 'select' || $(fields[i]).data('type') == 'multiselect') {
                         tmp[keys[i]] = $(fields[i]).find('select').val();
                     } else if ($(fields[i]).data('type') == 'textarea') {
                         tmp[keys[i]] = $(fields[i]).find('textarea').val();
@@ -190,6 +190,7 @@
                 });
                 $field.empty();
                 $field.append(input);
+                typePlugin.postMakeEditable($field, input);
             }else{
                 $(editableRecord.detailButton).appendTo($field).on('click.editableRecord', function () {
                     if($(this).closest('tr').attr('id') === undefined) return;
@@ -215,12 +216,12 @@
             editableRecord.find('tbody tr').each(function (i, tr) {
                 var $row = $(tr);
                 var postData = {};
-    
-                if(isChanged($row)){
-                    if(doValidate(editableRecord, $row)){
+
+                if (isChanged($row)) {
+                    if (doValidate(editableRecord, $row)) {
                         postData = getPostData(editableRecord, keys, $row);
                         postDatas.push({data:postData, row: $row});
-                    }else {
+                    } else {
                         $row.addClass('negative');
                         $row.find('div.ui.input').addClass('error');
                     }
@@ -411,9 +412,9 @@
             if (!$(td).hasClass('action')){
                 var typePlugin = getTypePlugin(td);
                 var name = keys[idx];
-                if(editableRecord.validation.hasOwnProperty(name)){
+                if (editableRecord.validation.hasOwnProperty(name)) {
                     result = result && typePlugin.validate(editableRecord.validation[name], td);
-                }else {
+                } else {
                     result = result && true;
                 }
             }
@@ -436,6 +437,8 @@
 
             return inputField;
         },
+
+        postMakeEditable: function() {},
 
         isChanged: function (field) {
             return field.attr('data-value') !== field.find('input').val();
@@ -587,6 +590,7 @@
         makeEditable: function (field) {
             var $field = $(field),
                 value = $field.data('value') || $field.text(),
+                classes = $field.data('classes'),
                 defaultValue = $field.data('defaultvalue'),
                 defaultLabel = $field.data('defaultlabel'),
                 optionsFunction = $field.data('options');
@@ -596,8 +600,11 @@
                 options = window[optionsFunction]();
             }
 
-            $field.attr('data-value', value);
-            var inputField = $('<select class="ui dropdown"></select>');
+            $field.data('value', value);
+            var inputField = $('<select></select>');
+            if (classes) {
+                inputField.addClass(classes);
+            }
 
             if (defaultValue) {
                 var defaultOption = $('<option></option>');
@@ -610,14 +617,19 @@
                 var option = $('<option></option>');
                 option.val(elem.value);
                 option.text(elem.text);
-                if(elem.value === value){
+                if (elem.text === value) {
                     option.attr('selected', true);
                 }
                 inputField.append(option);
             });
 
-            inputField.dropdown();
             return inputField;
+        },
+
+        postMakeEditable: function(field, input) {
+            var search = field.data('dropdown-search') || false;
+
+            input.dropdown({ fullTextSearch: search });
         },
 
         isChanged: function(field) {
@@ -645,10 +657,107 @@
                 value = $field.data('value') || $field.text();
             
             $field.find('option').each(function (idx, elem) {
-                if (elem.value === value) {
-                    $(elem).prop('selected', true);
-                }
+                elem.value === value ? $(elem).attr('selected', true) : $(elem).attr('selected', false);
             });
+
+           $field.find('select').dropdown('restore defaults');
+        }
+    });
+
+    $.fn.editableRecord.typePlugins.multiselect = $.extend({}, $.fn.editableRecord.typePlugins.select, {
+        makeEditable: function (field) {
+            var $field = $(field),
+                value = [],
+                classes = $field.data('classes'),
+                defaultValue = $field.data('defaultvalue'),
+                defaultLabel = $field.data('defaultlabel'),
+                optionsFunction = $field.data('options');
+
+            // Create array of objects of existing values.
+            var items = $('.item .content', field);
+            if (items.length == 0) {
+                // Support both div and ul Semantic lists.
+                items = $('ul li', field);
+            }
+            items.each(function(idx, elem) {
+                value.push({ 'value': $(elem).data('value'), 'text': $(elem).text() });
+            });
+
+            var options = [];
+            if (optionsFunction) {
+                options = window[optionsFunction]();
+            }
+
+            $field.data('value', value);
+            var inputField = $('<select multiple="multiple"></select>');
+            if (classes) {
+                inputField.addClass(classes);
+            }
+
+            if (defaultValue) {
+                var defaultOption = $('<option></option>');
+                defaultOption.val(defaultValue);
+                defaultOption.text(defaultLabel);
+                inputField.append(defaultOption);
+            }
+
+            $.each(options, function(idx, elem) {
+                var option = $('<option></option>');
+                option.val(elem.value);
+                option.text(elem.text);
+                $.each(value, function(idx2, elem2) {
+                    if (elem.value == elem2.value) {
+                        option.attr('selected', true);
+                    }
+                });
+                inputField.append(option);
+            });
+
+            return inputField;
+        },
+
+        isChanged: function(field) {
+            var value = field.data('value') || field.text(),
+                ret = false;
+
+            // Quick check (to handle an empty initial state)
+            if (value.length != field.find('option:selected')) {
+                return true;
+            }
+
+            // More thorough check
+            field.find('option').each(function (idx, elem) {
+                $.each(value, function(idx2, elem2) {
+                    if (elem.value == elem2.value) {
+                        if ($(elem).prop('selected') == false) {
+                            ret = true;
+                            return;
+                        }
+                    } else {
+                        if ($(elem).prop('selected') == true) {
+                            ret = true;
+                            return;
+                        }
+                    }
+                });
+
+                if (ret) return;
+            });
+
+            return ret;
+        },
+
+        fieldReset: function (field) {
+            var $field = $(field),
+                value = $field.data('value') || $field.text();
+
+            $field.find('option').each(function (idx, elem) {
+                $.each(value, function(idx2, elem2) {
+                    elem.value == elem2.value ? $(elem).attr('selected', true) : $(elem).attr('selected', false);
+                });
+            });
+
+           $field.find('select').dropdown('restore defaults');
         }
     });
 
