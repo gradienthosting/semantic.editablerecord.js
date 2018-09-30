@@ -429,7 +429,7 @@
 
         makeEditable: function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui fluid transparent input"></div>');
@@ -497,7 +497,7 @@
     $.fn.editableRecord.typePlugins.email = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui fluid transparent input"></div>');
@@ -509,7 +509,7 @@
     $.fn.editableRecord.typePlugins.number = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui transparent input"></div>');
@@ -521,7 +521,7 @@
     $.fn.editableRecord.typePlugins.date = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function(field){
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui transparent input"></div>');
@@ -533,7 +533,7 @@
     $.fn.editableRecord.typePlugins.datetime = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function(field){
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui transparent input"></div>');
@@ -545,7 +545,7 @@
     $.fn.editableRecord.typePlugins.checkbox = $.extend({}, $.fn.editableRecord.typePlugins.text, {
         makeEditable: function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text(),
+                value = $field.data('value') || $field.text().trim(),
                 checkedValue = $field.data('checked'),
                 uncheckedValue = $field.data('unchecked');
 
@@ -576,7 +576,7 @@
     $.fn.editableRecord.typePlugins.color = $.extend({}, $.fn.editableRecord.typePlugins.text,{
         makeEditable: function (field) {
             var $field = $(field),
-                value = $field.data('value') || $field.text();
+                value = $field.data('value') || $field.text().trim();
 
             $field.attr('data-value', value);
             var inputWrapper = $('<div class="ui fluid transparent input"></div>');
