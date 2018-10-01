@@ -689,7 +689,7 @@
             }
 
             $field.data('value', value);
-            var inputField = $('<select multiple="multiple"></select>');
+            var inputField = $('<select class="ui selection dropdown" multiple=""></select>');
             if (classes) {
                 inputField.addClass(classes);
             }
