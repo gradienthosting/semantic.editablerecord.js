@@ -183,9 +183,13 @@
                 $field.removeClass('selectable');
                 var typePlugin = getTypePlugin(td);
                 var input = typePlugin.makeEditable(td);
+                var onchangeFunction = $field.data('onchange');
                 input.on('change.editableRecord keyup.editableRecord click.editableRecord', function(){
                     if(typePlugin.isChanged($field)){
                         showButtons(editableRecord);
+                    }
+                    if (onchangeFunction) {
+                        window[onchangeFunction]($field);
                     }
                 });
                 $field.empty();
